@@ -1,54 +1,48 @@
 pipeline {
     agent any
-
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub')
-        DOCKERHUB_REPO = "lingababu/flask-webapp"
-        IMAGE_TAG = "latest"
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
+        IMAGE_NAME = "lingababu30/flaskapp"
     }
-
     stages {
         stage('Checkout Code') {
             steps {
-                echo 'Checking out source code...'
-                git 'https://github.com/yourusername/flaskApp.git'
+                echo "Checking out source code..."
+                git branch: 'main',
+                    credentialsId: 'github-credentials',
+                    url: 'https://github.com/Lingababu30/my-flask-app.git'
             }
         }
-
         stage('Build Docker Image') {
             steps {
                 script {
-                    echo 'Building Docker image...'
-                    sh 'docker build -t $DOCKERHUB_REPO:$IMAGE_TAG .'
+                    sh 'docker build -t $IMAGE_NAME:latest .'
                 }
             }
         }
-
         stage('Login to Docker Hub') {
             steps {
                 script {
-                    echo 'Logging into Docker Hub...'
-                    sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                        sh 'echo $PASS | docker login -u $USER --password-stdin'
+                    }
                 }
             }
         }
-
         stage('Push Image to Docker Hub') {
             steps {
                 script {
-                    echo 'Pushing Docker image...'
-                    sh 'docker push $DOCKERHUB_REPO:$IMAGE_TAG'
+                    sh 'docker push $IMAGE_NAME:latest'
                 }
             }
         }
     }
-
     post {
-        success {
-            echo '✅ Docker image built and pushed successfully!'
-        }
         failure {
-            echo '❌ Build failed. Check logs.'
+            echo "❌ Build failed. Check logs."
+        }
+        success {
+            echo "✅ Docker image pushed successfully!"
         }
     }
 }
